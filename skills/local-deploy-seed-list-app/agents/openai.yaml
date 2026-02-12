@@ -1,0 +1,4 @@
+interface:
+  display_name: "Local Deploy Seed List App"
+  short_description: "Set up and run Seed List App locally"
+  default_prompt: "Set up this Seed List App for local development, run migrations, and start the API server."

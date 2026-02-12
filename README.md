@@ -4,23 +4,35 @@ This repository is moving from planning into implementation.
 
 ## Current Implementation Status
 
-### Completed in this kickoff
+### Completed
 - FastAPI project scaffold
 - Environment config loading via `pydantic-settings`
 - SQLAlchemy DB session wiring
 - Alembic migration framework setup
 - `seed_accounts` model and initial migration
-- Part 1 API endpoints:
+- Seed API endpoints:
   - `POST /seed-accounts`
   - `GET /seed-accounts`
   - `PATCH /seed-accounts/{id}`
+- Campaign API endpoints:
+  - `POST /campaigns`
+  - `GET /campaigns`
+  - `POST /campaigns/{id}/checks/run`
+  - `GET /campaigns/{id}/results`
+- Dashboard API endpoints:
+  - `GET /dashboard/summary?from_ts=&to_ts=`
+  - `GET /dashboard/esp-breakdown?campaign_id=`
+- Alerts endpoint:
+  - `GET /alerts`
 - Validation via Pydantic (`EmailStr`, enum constraints)
-- Secret reference-only credential field (`credential_ref`)
+- Deterministic check-run simulation for local development
+- Alert generation for low inbox and high missing rates
 
-### Next planned slices
-- Queue and worker baseline (Part 2)
-- Campaign + delivery result tables and endpoints (Part 3)
-- Dashboard aggregate endpoints (Part 4)
+### Data model implemented
+- `seed_accounts`
+- `campaigns`
+- `delivery_results`
+- `alert_events`
 
 ## Local Run
 
@@ -36,7 +48,6 @@ pip install -e .
 alembic upgrade head
 uvicorn app.main:app --reload
 ```
-
 ### Definition of done
 - A campaign can be created and listed.
 - Triggering checks creates queue jobs against seed accounts.
@@ -275,3 +286,29 @@ If your team prefers Node end-to-end, you can substitute:
 - **ORM/Migrations:** Prisma or Drizzle
 
 Keep Postgres + Redis and the same service boundaries.
+
+## Local Smoke Test (PowerShell)
+
+1. Start local Postgres Docker container:
+```powershell
+powershell -ExecutionPolicy Bypass -File skills/local-deploy-seed-list-app/scripts/start_postgres_docker.ps1
+```
+2. Run migrations:
+```powershell
+& .\.venv\Scripts\Activate.ps1
+alembic upgrade head
+```
+3. Start API:
+```powershell
+uvicorn app.main:app --host 127.0.0.1 --port 8001
+```
+4. Verify:
+- `GET http://127.0.0.1:8001/health`
+- Create seeds and campaign, run checks, then query:
+  - `/campaigns/{id}/results`
+  - `/dashboard/summary`
+  - `/dashboard/esp-breakdown?campaign_id={id}`
+  - `/alerts`
+
+## Planning Status
+Planning is complete through all Phase 1 parts and coding kickoff. See `seed-list-app-plan.md` for the full roadmap.

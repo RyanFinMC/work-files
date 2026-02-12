@@ -5,6 +5,9 @@ from sqlalchemy import engine_from_config, pool
 
 from app.config import get_settings
 from app.models.base import Base
+from app.models.alert_event import AlertEvent
+from app.models.campaign import Campaign
+from app.models.delivery_result import DeliveryResult
 from app.models.seed_account import SeedAccount
 
 config = context.config

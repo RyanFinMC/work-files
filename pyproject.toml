@@ -1,4 +1,4 @@
-﻿[project]
+[project]
 name = "seed-list-app"
 version = "0.1.0"
 description = "Seed list app API"
