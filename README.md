@@ -1,91 +1,41 @@
-# Seed List App
+﻿# Seed List App
 
 This repository is moving from planning into implementation.
 
-## Planning Status
-✅ Planning is now complete through all Phase 1 parts and the coding kickoff plan below.
+## Current Implementation Status
 
-## Phase 1 (MVP Foundation)
+### Completed in this kickoff
+- FastAPI project scaffold
+- Environment config loading via `pydantic-settings`
+- SQLAlchemy DB session wiring
+- Alembic migration framework setup
+- `seed_accounts` model and initial migration
+- Part 1 API endpoints:
+  - `POST /seed-accounts`
+  - `GET /seed-accounts`
+  - `PATCH /seed-accounts/{id}`
+- Validation via Pydantic (`EmailStr`, enum constraints)
+- Secret reference-only credential field (`credential_ref`)
 
-### Phase 1 scope
-- Seed account CRUD + secret references
-- IMAP connector + worker queue
-- Campaign registration + basic result table
-- Simple dashboard summary + ESP table
+### Next planned slices
+- Queue and worker baseline (Part 2)
+- Campaign + delivery result tables and endpoints (Part 3)
+- Dashboard aggregate endpoints (Part 4)
 
-### Progress tracker
-- [ ] Part 1 — Seed Account CRUD + Secret References
-- [ ] Part 2 — IMAP Connector + Worker Queue
-- [ ] Part 3 — Campaign Registration + Basic Result Table
-- [ ] Part 4 — Simple Dashboard Summary + ESP Table
+## Local Run
 
----
+1. Install dependencies
+2. Copy `.env.example` to `.env` and update `DATABASE_URL`
+3. Run migrations
+4. Start API
 
-## Part 1 — Seed Account CRUD + Secret References
+Example commands:
 
-### Objective
-Implement the data model and API endpoints needed to create, update, list, and manage seed accounts without storing plaintext credentials.
-
-### Deliverables
-- [ ] `seed_accounts` schema finalized (UUID id, email, esp_name, auth_method, credential_ref, status, timestamps)
-- [ ] Unique constraint on `email`
-- [ ] `POST /seed-accounts` endpoint
-- [ ] `GET /seed-accounts` endpoint
-- [ ] `PATCH /seed-accounts/:id` endpoint
-- [ ] Validation rules (email format, allowed auth methods/status values)
-- [ ] Secret reference pattern documented (`credential_ref` only)
-
-### Definition of done
-- CRUD endpoints return consistent JSON payloads.
-- Invalid payloads return clear validation errors.
-- No plaintext mailbox passwords/tokens are persisted in the application database.
-
----
-
-## Part 2 — IMAP Connector + Worker Queue
-
-### Objective
-Build an asynchronous check pipeline that polls IMAP seed inboxes for campaign messages and writes normalized placement outcomes.
-
-### Deliverables
-- [ ] Worker queue selected and configured (e.g., Redis + queue abstraction)
-- [ ] Job payload contract defined (`campaign_id`, `seed_account_id`, `attempt`, `scheduled_at`)
-- [ ] IMAP connector module with login + mailbox selection + search capability
-- [ ] Poll schedule implemented (T+1, T+3, T+5, T+10 minutes)
-- [ ] Placement classification for IMAP folders (`inbox`, `spam`, `missing`)
-- [ ] Retry/backoff and final missing-state handling
-- [ ] Basic deduplication (avoid duplicate writes for same campaign/seed)
-- [ ] Structured worker logs (job id, seed id, provider, outcome, latency)
-- [ ] Failure handling for auth/network errors with status updates
-
-### Definition of done
-- Given a queued campaign check, worker attempts mailbox polling at configured intervals.
-- For each seed, a terminal state is produced within retry window (`inbox`, `spam`, or `missing`).
-- Transient failures are retried; permanent failures are surfaced with actionable logs.
-- Queue and worker can process multiple seed accounts concurrently without duplicate final writes.
-
----
-
-## Part 3 — Campaign Registration + Basic Result Table
-
-### Objective
-Implement campaign creation and result persistence so every seed check has a traceable campaign context.
-
-### Deliverables
-- [ ] `campaigns` table schema (`id`, `name`, `subject_identifier`, `header_identifier`, `tracking_id`, `sent_at`, `created_at`)
-- [ ] `delivery_results` table schema (`campaign_id`, `seed_account_id`, `placement`, `detected_at`, `latency_ms`, `source_provider`, auth fields)
-- [ ] FK constraints from `delivery_results` to `campaigns` and `seed_accounts`
-- [ ] `POST /campaigns` endpoint
-- [ ] `GET /campaigns` endpoint with basic pagination/filter by date
-- [ ] `POST /campaigns/:id/checks/run` endpoint to enqueue checks for selected/all seeds
-- [ ] Idempotency rule for campaign check runs (to avoid duplicate enqueue storms)
-- [ ] Basic query endpoint for results: `GET /campaigns/:id/results`
-
-### Result model contract
-- `placement`: `inbox | spam | promotions | missing`
-- `source_provider`: `imap | gmail_api | ms_graph`
-- `detected_at` and `latency_ms` nullable for terminal `missing`
-- auth columns optional: `spf_result`, `dkim_result`, `dmarc_result`
+```bash
+pip install -e .
+alembic upgrade head
+uvicorn app.main:app --reload
+```
 
 ### Definition of done
 - A campaign can be created and listed.
