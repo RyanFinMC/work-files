@@ -172,3 +172,156 @@ Expose a minimal read model/UI surface for immediate campaign and ESP health vis
 
 ## What we code next
 We start coding with **PR A (project skeleton + config)** and then proceed through PR B–E in order.
+
+---
+
+## Local Development Setup (Recommended)
+
+If you want to start implementation immediately, use this local stack:
+
+- **Frontend:** Next.js
+- **API:** FastAPI (Python)
+- **Database:** PostgreSQL
+- **Queue/Cache:** Redis
+- **Worker:** Celery (or RQ) worker process
+
+This aligns with the architecture in `seed-list-app-plan.md` and keeps the API + worker split clear from day one.
+
+### 1) Prerequisites
+
+Install locally:
+
+- Docker + Docker Compose (recommended for DB/Redis)
+- Python 3.11+
+- Node.js 20+
+- pnpm or npm
+
+### 2) Suggested project structure
+
+```text
+seed-list-app/
+  apps/
+    web/                 # Next.js UI
+    api/                 # FastAPI service
+    worker/              # Celery worker + polling jobs
+  infra/
+    docker-compose.yml   # Postgres + Redis
+  .env.example
+```
+
+### 3) `docker-compose.yml` (Postgres + Redis)
+
+Create `infra/docker-compose.yml`:
+
+```yaml
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: seed
+      POSTGRES_PASSWORD: seed
+      POSTGRES_DB: seedlist
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+volumes:
+  pgdata:
+```
+
+Run:
+
+```bash
+docker compose -f infra/docker-compose.yml up -d
+```
+
+### 4) Environment variables (`.env.example`)
+
+```dotenv
+# Shared
+DATABASE_URL=postgresql://seed:seed@localhost:5432/seedlist
+REDIS_URL=redis://localhost:6379/0
+
+# API
+API_PORT=8000
+SECRET_BACKEND=local
+
+# Worker polling cadence (minutes)
+POLL_SCHEDULE_MINUTES=1,3,5,10
+
+# Optional provider credentials
+GMAIL_CLIENT_ID=
+GMAIL_CLIENT_SECRET=
+MS_GRAPH_CLIENT_ID=
+MS_GRAPH_CLIENT_SECRET=
+```
+
+### 5) API service bootstrap (FastAPI)
+
+Inside `apps/api`:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install fastapi uvicorn sqlalchemy psycopg[binary] alembic pydantic-settings redis
+```
+
+Start API:
+
+```bash
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### 6) Worker bootstrap (Celery)
+
+Inside `apps/worker`:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install celery redis imapclient
+```
+
+Start worker:
+
+```bash
+celery -A worker.app worker --loglevel=INFO
+```
+
+### 7) Frontend bootstrap (Next.js)
+
+Inside `apps/web`:
+
+```bash
+npx create-next-app@latest . --ts --eslint --app --src-dir
+pnpm dev
+```
+
+Set API base URL in the web app env:
+
+```dotenv
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+```
+
+### 8) Minimum startup checklist
+
+- [ ] `docker compose ... up -d` (Postgres + Redis running)
+- [ ] API responds on `GET /health`
+- [ ] Worker connected to Redis and accepting jobs
+- [ ] Frontend loads and can call API base URL
+
+### 9) Alternate Node-only stack (also valid)
+
+If your team prefers Node end-to-end, you can substitute:
+
+- **API:** Express/NestJS
+- **Worker/Queue:** BullMQ + Redis
+- **ORM/Migrations:** Prisma or Drizzle
+
+Keep Postgres + Redis and the same service boundaries.
